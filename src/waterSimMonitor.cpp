@@ -4,7 +4,7 @@
  * 	Author: Evan Smith
  * 	Date  : 6/13/2017
  *
- * 	waterSimClient.cpp
+ * 	waterSimMonitor.cpp
  *
  * =======================================================================
  */
@@ -53,13 +53,13 @@ int main (int argc, char **argv)
 		} else {
 			
 			cout << "Unrecognized option: '" << arg
-			     << "'. ('waterSimClient -h' for help.)\n"; 
+			     << "'. ('waterSimMonitor -h' for help.)\n"; 
 			return 1;
 		
 		}
 	}
 	
-	cout << "waterSim Client\n";
+	cout << "waterSim Monitor\n";
 	
 	string channel_name("waterSim");
 
@@ -71,28 +71,29 @@ int main (int argc, char **argv)
 		
 		if (debug) PvaClient::setDebug(true);
 	
-	/* Connect the channel to the record. */
-		
+		// Have simulation thread in this program?
+
+		// Monitor stuff and print level values.
 		PvaClientChannelPtr channel = pvaClient->channel(channel_name);
-	
+		
 		if (!channel) {
 			cerr << "Channel '" << channel_name << "' failed to connect.\n";
 			return 1;
 		}
 
-	/* Alter the data on the record. */
+		PvaClientMonitorPtr monitor = channel->monitor("");
 		
-		PvaClientPutPtr put = channel->createPut("");
-		PvaClientPutDataPtr putData = put->getData();
-		PVStructurePtr pvStructure = putData->getPVStructure();
+		while(true) {
+			
+			monitor->waitEvent();
+		
+			PvaClientMonitorDataPtr monitorData = monitor->getData();
+			
+			cout << "Changed: " << *monitorData->getChangedBitSet() << endl;
 
-		/*
-		 	while (true) {
-				Alter the data on the record.
-				After some amount of time quit.
-			}
-		*/
-		
+			monitor->releaseEvent();
+		}
+
 
 	} catch (std::runtime_error e) {	
 		

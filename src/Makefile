@@ -26,6 +26,11 @@ PROD_HOST += Client
 Client_SRCS += waterSimClient.cpp
 Client_LIBS += pvaClient pvAccess nt pvData ca Com
 
+# Monitor
+PROD_HOST += Monitor
+Monitor_SRCS += waterSimMonitor.cpp
+Monitor_LIBS += pvaClient pvAccess nt pvData ca Com
+
 # Shared Library ABI version.
 SHRLIB_VERSION ?= 1.0
 
