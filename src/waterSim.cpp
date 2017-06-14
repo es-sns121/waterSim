@@ -40,21 +40,21 @@ static StandardFieldPtr     standardField = getStandardField();
 static PVDataCreatePtr       pvDataCreate = getPVDataCreate();
 static StandardPVFieldPtr standardPVField = getStandardPVField();
 
-static void createScalarRecord(
+static void createRecord(
 	PVDatabasePtr const &master,
 	ScalarType scalarType,
-	string const &recordNamePrefix)
+	string const &recordName)
 {
-	string recordName = recordNamePrefix;
-	
-	NTScalarBuilderPtr ntScalarBuilder = NTScalar::createBuilder();
-	
-	// Create the pvStructure to be inserted into the record.
-	PVStructurePtr pvStructure = ntScalarBuilder->
-		value(scalarType)->
-		addAlarm()->
-		addTimeStamp()->
-		createPVStructure();
+	StructureConstPtr top = fieldCreate->createFieldBuilder()->
+		add("water_level", pvDouble)->
+		add("pump_status", pvBoolean)->
+		add("pump_rate", pvDouble)->
+		add("outflow", pvDouble)->
+		add("alarm", standardField->alarm())->
+		add("timeStamp", standardField->timeStamp())->
+		createStructure();
+
+	PVStructurePtr pvStructure = pvDataCreate->createPVStructure(top);
 
 	// Create the record and attempt to add it to the database.	
 	PVRecordPtr pvRecord = PVRecord::create(recordName, pvStructure);
@@ -73,7 +73,7 @@ PVDatabasePtr WaterSim::create()
 	PVDatabasePtr master = PVDatabase::getMaster();
 	
 	// Create string and string array records.	
-	createScalarRecord(master, pvDouble, "waterSim");
+	createRecord(master, pvDouble, "waterSim");
 	
 	return master;
 }
