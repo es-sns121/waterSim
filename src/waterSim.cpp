@@ -5,8 +5,7 @@
  *
  * 	waterSim.cpp
  *
- *	Source file that implements the creation of the normative
- *	type database.
+ *	Source file that implements the creation of the database.
  *
  * =============================================================
  */
