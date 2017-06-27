@@ -125,6 +125,8 @@ void WaterSimRecord::initPvt() {
 	alarmLimit = createAlarmLimit();
 
 	waterLevel = pvStructure->getSubField<PVDouble>("water_level");
+	waterLevel->put(187.0);
+	
 	outflow = pvStructure->getSubField<PVDouble>("outflow");
 	pumpRate = pvStructure->getSubField<PVDouble>("pump_rate");
 	pumpStatus = pvStructure->getSubField<PVBoolean>("pump_status");
@@ -143,9 +145,31 @@ void WaterSimRecord::initPvt() {
 	lowAlarm.setSeverity(noAlarm);
 	pvLowAlarm.set(lowAlarm);
 
+	alarmLimit = pvStructure->getSubField<PVStructure>("alarmLimit");
+	alarmLimit->getSubField<PVDouble>("highWarningLimit")->put(188.0);
+	alarmLimit->getSubField<PVDouble>("lowWarningLimit")->put(184.0);
 }
 
 void WaterSimRecord::process()
 {
+	// Based on the outflow, set the new water level.
+	double newLevel = waterLevel->get();
+	newLevel -= outflow->get();	
+	newLevel += pumpRate->get();
 
+	cout << "newLevel: " << newLevel << endl;
+
+	if (newLevel < alarmLimit->getSubField<PVDouble>("lowWarningLimit")->get()) {
+		pumpStatus->put(true);
+		pumpRate->put(1.2);
+	}
+
+	if (newLevel > alarmLimit->getSubField<PVDouble>("highWarningLimit")->get()) {
+		pumpStatus->put(false);
+		pumpRate->put(0.0);
+	}
+	
+	waterLevel->put(newLevel);
+
+	
 }
