@@ -89,7 +89,7 @@ int main (int argc, char **argv)
 		
 			PvaClientMonitorDataPtr monitorData = monitor->getData();
 			
-			cout << "Changed: " << *monitorData->getChangedBitSet() << endl;
+			cout << "Water Level (ft): " << monitorData->getPVStructure()->getSubField<PVDouble>("water_level")->get() << endl;
 
 			monitor->releaseEvent();
 		}

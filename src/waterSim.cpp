@@ -42,6 +42,7 @@ static StandardFieldPtr     standardField = getStandardField();
 static PVDataCreatePtr       pvDataCreate = getPVDataCreate();
 static StandardPVFieldPtr standardPVField = getStandardPVField();
 
+// Creates an alarmLimit structure
 PVStructurePtr createAlarmLimit()
 {
 	
@@ -65,6 +66,7 @@ PVStructurePtr createAlarmLimit()
 	return pvStructure;
 }
 
+// Creates a water sim record
 WaterSimRecordPtr WaterSimRecord::create(const string & recordName)
 {
 	StructureConstPtr top = fieldCreate->createFieldBuilder()->
@@ -124,13 +126,16 @@ void WaterSimRecord::initPvt() {
 	
 	alarmLimit = createAlarmLimit();
 
+	// Set the starting water level
 	waterLevel = pvStructure->getSubField<PVDouble>("water_level");
-	waterLevel->put(187.0);
+	waterLevel->put(188.0);
 	
 	outflow = pvStructure->getSubField<PVDouble>("outflow");
 	pumpRate = pvStructure->getSubField<PVDouble>("pump_rate");
 	pumpStatus = pvStructure->getSubField<PVBoolean>("pump_status");
 	
+	// Attach and initialize the two alarms.
+
 	PVFieldPtr pvField = pvStructure->getSubField("highAlarm");
 	
 	pvHighAlarm.attach(pvField);
@@ -145,6 +150,7 @@ void WaterSimRecord::initPvt() {
 	lowAlarm.setSeverity(noAlarm);
 	pvLowAlarm.set(lowAlarm);
 
+	// Initialize the warning limits to the desired water level range
 	alarmLimit = pvStructure->getSubField<PVStructure>("alarmLimit");
 	alarmLimit->getSubField<PVDouble>("highWarningLimit")->put(188.0);
 	alarmLimit->getSubField<PVDouble>("lowWarningLimit")->put(184.0);
@@ -157,18 +163,18 @@ void WaterSimRecord::process()
 	newLevel -= outflow->get();	
 	newLevel += pumpRate->get();
 
-	cout << "newLevel: " << newLevel << endl;
-
+	// Turn on the pump at the low warning limit
 	if (newLevel < alarmLimit->getSubField<PVDouble>("lowWarningLimit")->get()) {
 		pumpStatus->put(true);
 		pumpRate->put(1.2);
 	}
 
+	// Turn off the pump at the high warning limit
 	if (newLevel > alarmLimit->getSubField<PVDouble>("highWarningLimit")->get()) {
 		pumpStatus->put(false);
 		pumpRate->put(0.0);
 	}
-	
+
 	waterLevel->put(newLevel);
 
 	
