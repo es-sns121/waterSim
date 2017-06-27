@@ -58,7 +58,7 @@ int main (int argc, char **argv)
 	
 	ChannelProviderLocalPtr cpLocal = getChannelProviderLocal();
 
-	PVDatabasePtr master = WaterSim::create();
+	PVDatabasePtr master = epics::waterSim::WaterSim::create();
 
 	// After the records are added to the database, start the server. 
 	ServerContext::shared_pointer pvaServer =

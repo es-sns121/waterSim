@@ -10,7 +10,7 @@
  * =============================================================
  */
 
-// Located in local pv directory.
+#define epicsExportSharedSymbols
 #include <pv/waterSim.h>
 
 #include <iostream>
@@ -18,18 +18,21 @@
 #include <string>
 #include <vector>
 
+#include <pv/channelProviderLocal.h>
+#include <pv/ntfield.h>
+#include <pv/ntscalar.h>
+#include <pv/serverContext.h>
 #include <pv/standardField.h>
 #include <pv/standardPVField.h>
-#include <pv/channelProviderLocal.h>
-#include <pv/serverContext.h>
-#include <pv/ntscalar.h>
 
 using namespace std;
 using std::tr1::static_pointer_cast;
-using namespace epics::pvData;
+
 using namespace epics::nt;
-using namespace epics::pvDatabase;
 using namespace epics::pvAccess;
+using namespace epics::pvData;
+using namespace epics::pvDatabase;
+
 // Defined locally in pv/waterSim.h
 using namespace epics::waterSim;
 
@@ -39,28 +42,54 @@ static StandardFieldPtr     standardField = getStandardField();
 static PVDataCreatePtr       pvDataCreate = getPVDataCreate();
 static StandardPVFieldPtr standardPVField = getStandardPVField();
 
-static void createRecord(
-	PVDatabasePtr const &master,
-	ScalarType scalarType,
-	string const &recordName)
+PVStructurePtr createAlarmLimit()
 {
+	
 	StructureConstPtr top = fieldCreate->createFieldBuilder()->
-		add("water_level", pvDouble)->
-		add("pump_status", pvBoolean)->
-		add("pump_rate", pvDouble)->
-		add("outflow", pvDouble)->
-		add("alarm", standardField->alarm())->
-		add("timeStamp", standardField->timeStamp())->
-		add("display", standardField->display())->
+		
+		add("active", pvBoolean)->
+		add("lowAlarmLimit", pvDouble)->
+		add("lowWarningLimit", pvDouble)->
+		add("highWarningLimit", pvDouble)->
+		add("highAlarmLimit", pvDouble)->
+		add("lowAlarmSeverity", pvInt)->
+		add("lowWarningSeverity", pvInt)->
+		add("highWarningSeverity", pvInt)->
+		add("highAlarmSeverity", pvInt)->
+		add("hysteresis", pvDouble)->
+		
 		createStructure();
 
 	PVStructurePtr pvStructure = pvDataCreate->createPVStructure(top);
 
-	// Create the record and attempt to add it to the database.	
-	PVRecordPtr pvRecord = PVRecord::create(recordName, pvStructure);
-	
-	bool result = master->addRecord(pvRecord);
-	if (!result) cerr << "Failed to add record " << recordName << " to database\n";
+	return pvStructure;
+}
+
+WaterSimRecordPtr WaterSimRecord::create(const string & recordName)
+{
+	StructureConstPtr top = fieldCreate->createFieldBuilder()->
+		
+		add("water_level", pvDouble)->
+		add("pump_status", pvBoolean)->
+		add("pump_rate", pvDouble)->
+		add("outflow", pvDouble)->
+		
+		add("highAlarm", standardField->alarm())->
+		add("lowAlarm", standardField->alarm())->
+		
+		add("timeStamp", standardField->timeStamp())->
+		add("display", standardField->display())->
+		add("alarmLimit", createAlarmLimit()->getField())->
+
+		createStructure();
+
+	PVStructurePtr pvStructure = pvDataCreate->createPVStructure(top);
+
+	WaterSimRecordPtr pvRecord( new WaterSimRecord(recordName, pvStructure) );
+
+	pvRecord->initPvt();
+
+	return pvRecord;
 
 }
 
@@ -71,9 +100,52 @@ PVDatabasePtr WaterSim::create()
 	// Get the database hosted by the local provider.
 	PVDatabasePtr master = PVDatabase::getMaster();
 	
-	// Create string and string array records.	
-	createRecord(master, pvDouble, "waterSim");
+	string recordName("waterSim");
 
+	PVRecordPtr pvRecord = WaterSimRecord::create(recordName);
+
+	bool result = master->addRecord(pvRecord);
+	if (!result) cerr << "Failed to add record " << recordName << " to database\n";
+	
 	return master;
 }
 
+WaterSimRecord::WaterSimRecord(const string & recordName,
+				   const PVStructurePtr & pvStructure)
+		: PVRecord(recordName, pvStructure)
+{
+}
+
+void WaterSimRecord::initPvt() {
+	
+	initPVRecord();
+
+	PVStructurePtr pvStructure = getPVStructure();
+	
+	alarmLimit = createAlarmLimit();
+
+	waterLevel = pvStructure->getSubField<PVDouble>("water_level");
+	outflow = pvStructure->getSubField<PVDouble>("outflow");
+	pumpRate = pvStructure->getSubField<PVDouble>("pump_rate");
+	pumpStatus = pvStructure->getSubField<PVBoolean>("pump_status");
+	
+	PVFieldPtr pvField = pvStructure->getSubField("highAlarm");
+	
+	pvHighAlarm.attach(pvField);
+	highAlarm.setMessage("no alarm");
+	highAlarm.setSeverity(noAlarm);
+	pvHighAlarm.set(highAlarm);
+
+	pvField = pvStructure->getSubField("lowAlarm");
+	
+	pvLowAlarm.attach(pvField);
+	lowAlarm.setMessage("no alarm");
+	lowAlarm.setSeverity(noAlarm);
+	pvLowAlarm.set(lowAlarm);
+
+}
+
+void WaterSimRecord::process()
+{
+
+}

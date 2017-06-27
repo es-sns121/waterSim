@@ -4,7 +4,6 @@ TOP=..
 
 include $(TOP)/configure/CONFIG
 
-#USR_CXXFLAGS += -std=c++0x 
 waterSimSRC = $(TOP)/src
 
 # Includes
