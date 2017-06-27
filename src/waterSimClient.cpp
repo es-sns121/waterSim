@@ -13,6 +13,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <time.h>
 #include <pv/pvAccess.h>
 #include <pv/pvaClient.h>
 #include <pv/pvData.h>
@@ -22,6 +23,20 @@ using namespace epics::pvData;
 using namespace epics::pvAccess;
 using namespace epics::pvaClient;
 
+double genOutflowValue () {
+	static bool first_call = true;
+
+	if (first_call) {
+		first_call = false;
+		srand(time(NULL));
+	}
+
+	double outflow(0.0);
+
+	outflow = ((rand() % 10000) / 10000.0);
+
+	return outflow;
+}
 
 int main (int argc, char **argv)
 {
@@ -85,13 +100,29 @@ int main (int argc, char **argv)
 		PvaClientPutPtr put = channel->createPut("");
 		PvaClientPutDataPtr putData = put->getData();
 		PVStructurePtr pvStructure = putData->getPVStructure();
-
-		/*
-		 	while (true) {
-				Alter the data on the record.
-				After some amount of time quit.
+		
+		PVDoublePtr outflow = pvStructure->getSubField<PVDouble>("outflow");
+		
+		if (!outflow) {
+			cerr << "outflow NULL\n";
+			return -1;
+		}
+		
+		double outflow_value = 0;
+		
+		for (size_t i = 0; i < 96; ++i) {
+			
+			outflow_value = genOutflowValue();
+			
+			if (verbosity) { 
+				cout << setprecision(4) << fixed
+					 << setw(10) << "outflow: " << setw(6) << outflow_value << "\n";
 			}
-		*/
+			outflow->put(outflow_value);
+			put->put();
+		
+			sleep(2.0);
+		}
 		
 
 	} catch (std::runtime_error e) {	

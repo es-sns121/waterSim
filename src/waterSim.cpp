@@ -51,6 +51,7 @@ static void createRecord(
 		add("outflow", pvDouble)->
 		add("alarm", standardField->alarm())->
 		add("timeStamp", standardField->timeStamp())->
+		add("display", standardField->display())->
 		createStructure();
 
 	PVStructurePtr pvStructure = pvDataCreate->createPVStructure(top);
@@ -61,7 +62,6 @@ static void createRecord(
 	bool result = master->addRecord(pvRecord);
 	if (!result) cerr << "Failed to add record " << recordName << " to database\n";
 
-	return ;
 }
 
 // Creates and adds records to database.
@@ -73,7 +73,7 @@ PVDatabasePtr WaterSim::create()
 	
 	// Create string and string array records.	
 	createRecord(master, pvDouble, "waterSim");
-	
+
 	return master;
 }
 
