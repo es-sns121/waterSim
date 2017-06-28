@@ -66,8 +66,8 @@ PVStructurePtr createAlarmLimit()
 	return pvStructure;
 }
 
-// Creates a water sim record
-WaterSimRecordPtr WaterSimRecord::create(const string & recordName)
+/* Creates a water sim record */
+WaterSimRecordPtr WaterSimRecord::createRecord(const string & recordName)
 {
 	StructureConstPtr top = fieldCreate->createFieldBuilder()->
 		
@@ -95,16 +95,16 @@ WaterSimRecordPtr WaterSimRecord::create(const string & recordName)
 
 }
 
-// Creates and adds records to database.
+/* Creates and adds records to database. */
 PVDatabasePtr WaterSim::create()
 {
 
-	// Get the database hosted by the local provider.
+/* Get the database hosted by the local provider. */
 	PVDatabasePtr master = PVDatabase::getMaster();
 	
 	string recordName("waterSim");
 
-	PVRecordPtr pvRecord = WaterSimRecord::create(recordName);
+	PVRecordPtr pvRecord = WaterSimRecord::createRecord(recordName);
 
 	bool result = master->addRecord(pvRecord);
 	if (!result) cerr << "Failed to add record " << recordName << " to database\n";
@@ -118,23 +118,22 @@ WaterSimRecord::WaterSimRecord(const string & recordName,
 {
 }
 
-void WaterSimRecord::initPvt() {
+void WaterSimRecord::initAlarmLimitPvt()
+{
+	PVStructurePtr pvStructure = getPVStructure();
 	
-	initPVRecord();
+/* Initialize the warning limits to the desired water level range */
+
+	alarmLimit = pvStructure->getSubField<PVStructure>("alarmLimit");
+	alarmLimit->getSubField<PVDouble>("highWarningLimit")->put(188.0);
+	alarmLimit->getSubField<PVDouble>("lowWarningLimit")->put(184.0);
+}
+void WaterSimRecord::initAlarmsPvt() 
+{
 
 	PVStructurePtr pvStructure = getPVStructure();
 	
-	alarmLimit = createAlarmLimit();
-
-	// Set the starting water level
-	waterLevel = pvStructure->getSubField<PVDouble>("water_level");
-	waterLevel->put(188.0);
-	
-	outflow = pvStructure->getSubField<PVDouble>("outflow");
-	pumpRate = pvStructure->getSubField<PVDouble>("pump_rate");
-	pumpStatus = pvStructure->getSubField<PVBoolean>("pump_status");
-	
-	// Attach and initialize the two alarms.
+/* Attach and initialize the high and low alarms. */
 
 	PVFieldPtr pvField = pvStructure->getSubField("highAlarm");
 	
@@ -150,26 +149,49 @@ void WaterSimRecord::initPvt() {
 	lowAlarm.setSeverity(noAlarm);
 	pvLowAlarm.set(lowAlarm);
 
-	// Initialize the warning limits to the desired water level range
-	alarmLimit = pvStructure->getSubField<PVStructure>("alarmLimit");
-	alarmLimit->getSubField<PVDouble>("highWarningLimit")->put(188.0);
-	alarmLimit->getSubField<PVDouble>("lowWarningLimit")->put(184.0);
+}
+
+void WaterSimRecord::initPvt()
+{
+	
+	initPVRecord();
+
+	PVStructurePtr pvStructure = getPVStructure();
+	
+	alarmLimit = createAlarmLimit();
+
+/* Set the starting water level */
+	waterLevel = pvStructure->getSubField<PVDouble>("water_level");
+	waterLevel->put(188.0);
+
+/* Initialize the convenience pointers in the record class */
+	outflow = pvStructure->getSubField<PVDouble>("outflow");
+	pumpRate = pvStructure->getSubField<PVDouble>("pump_rate");
+	pumpStatus = pvStructure->getSubField<PVBoolean>("pump_status");
+
+/* Initialize the Alarms and AlarmLimit */
+
+	initAlarmsPvt();
+
+	initAlarmLimitPvt();
+
 }
 
 void WaterSimRecord::process()
 {
-	// Based on the outflow, set the new water level.
+
+/* Based on the outflow, set the new water level. */
 	double newLevel = waterLevel->get();
 	newLevel -= outflow->get();	
 	newLevel += pumpRate->get();
 
-	// Turn on the pump at the low warning limit
+/* Turn on the pump at the low warning limit */
 	if (newLevel < alarmLimit->getSubField<PVDouble>("lowWarningLimit")->get()) {
 		pumpStatus->put(true);
 		pumpRate->put(1.2);
 	}
 
-	// Turn off the pump at the high warning limit
+/* Turn off the pump at the high warning limit */
 	if (newLevel > alarmLimit->getSubField<PVDouble>("highWarningLimit")->get()) {
 		pumpStatus->put(false);
 		pumpRate->put(0.0);
@@ -177,5 +199,4 @@ void WaterSimRecord::process()
 
 	waterLevel->put(newLevel);
 
-	
 }

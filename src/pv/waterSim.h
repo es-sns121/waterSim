@@ -36,7 +36,7 @@ namespace epics { namespace waterSim {
 		public:
 			POINTER_DEFINITIONS(WaterSim);
 			
-			static WaterSimRecordPtr create(const std::string & recordName);
+			static WaterSimRecordPtr createRecord(const std::string & recordName);
 			
 			virtual ~WaterSimRecord() {}
 			
@@ -48,6 +48,8 @@ namespace epics { namespace waterSim {
 				epics::pvData::PVStructurePtr const & pvStructure);
 			
 			void initPvt();
+			void initAlarmsPvt();
+			void initAlarmLimitPvt();
 
 			epics::pvData::PVAlarm pvHighAlarm;
 			epics::pvData::Alarm   highAlarm;
